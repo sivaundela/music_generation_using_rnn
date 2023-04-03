@@ -2,12 +2,8 @@ import os
 import numpy as np
 import json
 import argparse
-import tensorflow as tf
-from tensorflow import keras
-from keras.models import Sequential, load_model
-from model import build_model, save_weights, load_weights
-from keras.layers import LSTM, Dropout, TimeDistributed, Dense, Activation, Embedding
 
+from model import build_model, save_weights, load_weights
 
 LOG_DIR = './logs'
 DATA_DIR = './data'
@@ -41,26 +37,16 @@ def read_batches(T, vocab_size):
                 Y[batch_idx, i, T[batch_chars * batch_idx + start + i + 1]] = 1
         yield X, Y
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Train the model on some text.")
-    parser.add_argument('--input', default='jigs.txt', help='name of the text file to train from')
-    parser.add_argument('--epochs', type=int, default=100, help='number of epochs to train on')
-    parser.add_argument('--freq', type=int, default=10, help='checkpoint to save frequency')
-    args = parser.parse_args()
-
-    if not os.path.exists(LOG_DIR):
-        os.makedirs(LOG_DIR)
-
-    epochs = args.epochs
-    freq = args.freq
-    input = open(os.path.join(DATA_DIR, args.input)).read()
-
+def train(input, epochs = 100, save_freq=10):
+    
     print("processing")
-
     char_to_idx = {
         ch:i for (i, ch) in enumerate(sorted(list(set(input))))
     }
     print("Number of unique charaters:" + str(len(char_to_idx)))
+
+    with open(os.path.join(DATA_DIR, 'char_to_idx_1.json'), 'w') as f:
+        json.dump(char_to_idx, f)
 
     idx_to_char = {
         i: ch for (ch, i) in char_to_idx.items()
@@ -69,14 +55,7 @@ if __name__ == '__main__':
     print(vocab_size)
     print("processing done")
 
-    model = Sequential()
-    model.add(Embedding(vocab_size, 512, batch_input_shape=(BATCH_SIZE, SEQ_LENGTH)))
-    for i in range(3):
-        model.add(LSTM(256, return_sequences=True, stateful=True))
-        model.add(Dropout(0.2))
-
-    model.add(TimeDistributed(Dense(vocab_size))) 
-    model.add(Activation('softmax'))
+    model = build_model(BATCH_SIZE, SEQ_LENGTH, vocab_size)
     print("model created")
 
     model.summary()
@@ -113,3 +92,15 @@ if __name__ == '__main__':
                 print('Saved checkpoint to', 'weights.{}.h5'.format(epoch + 1))
 
     print("training done...........")
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Train the model on some text.")
+    parser.add_argument('--input', default='jigs.txt', help='name of the text file to train from')
+    parser.add_argument('--epochs', type=int, default=100, help='number of epochs to train on')
+    parser.add_argument('--freq', type=int, default=10, help='checkpoint to save frequency')
+    args = parser.parse_args()
+
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR)
+
+    train(open(os.path.join(DATA_DIR, args.input)).read(), args.epochs, args.freq)
