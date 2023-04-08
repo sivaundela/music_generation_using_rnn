@@ -47,7 +47,14 @@ def sample(epoch, header, num_chars):
         sample = np.random.choice(range(vocab_size), p=result)
         sampled.append(sample)
 
-    return ''.join(idx_to_char[c] for c in sampled)
+    res = ''.join(idx_to_char[c] for c in sampled)
+    k = res.find("X:")
+    if k != -1:
+        res = res[k:]
+        ind = res.find("\n\n\n")
+        return res[:ind + 1]
+    return ""
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sample some text from the trained model.')
